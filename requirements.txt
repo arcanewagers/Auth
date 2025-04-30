@@ -1,0 +1,24 @@
+fastapi[all]
+passlib[bcrypt]
+google-auth
+requests
+python-jose
+sqlalchemy
+PyJWT
+psycopg2-binary
+python-whois
+beautifulsoup4
+pytrends
+nltk
+aiohttp
+sendgrid
+
+pydub 
+smtplib
+aiofiles
+# pyaudio
+pydantic
+python-multipart
+SQLAlchemy
+sqlalchemy-utils
+cloudinary
