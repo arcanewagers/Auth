@@ -41,5 +41,20 @@ class EmailService:
             # Log the error - you'll want to add proper logging
             print(f"Error sending email: {e}")
             raise
-
-    
+    def send_verfication_email(self, to_email: str, verification_token: str):
+        """Send verification link"""
+        subject="Verify yout account"
+        verification_link = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
+        html_content = f"""
+        <html>
+        <body>
+            <h2>Verify Your Email</h2>
+            <p>Thank you for signing up for WebIntel. Please verify your email by clicking the link below:</p>
+            <p><a href="{verification_link}">Verify Email</a></p>
+            <p>If you did not create an account, please ignore this email.</p>
+        </body>
+        </html>
+        """
+        
+        self.send_email(to_email, subject, html_content)
+        

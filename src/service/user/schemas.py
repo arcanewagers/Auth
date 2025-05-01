@@ -8,7 +8,7 @@ from service.user.entites import UserStatus
 
 class UserBase(BaseModel):
     email: EmailStr
-    full_name: Optional[str] = Field(None, max_length=100)
+    username: Optional[str] = Field(None, max_length=100)
     profile_image_url: Optional[HttpUrl] = None
 
     @field_validator('full_name')
@@ -39,7 +39,7 @@ class UserCreate(UserBase):
 
 class UserProfileUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    full_name: Optional[str] = Field(None, max_length=100)
+    username: Optional[str] = Field(None, max_length=100)
     profile_image: Optional[str] = None  # Base64 encoded image or None to remove
 
     @field_validator('full_name')

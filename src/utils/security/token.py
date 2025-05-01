@@ -85,4 +85,5 @@ def verify_password_reset_token(token: str) -> Dict[str, Any]:
         return payload
     except jwt.JWTError:
         raise AuthenticationException("Invalid or expired reset token")
+
     

@@ -14,8 +14,8 @@ class User(BaseModel):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, nullable=False, index=True)
-    hashed_password = Column(String)
-    full_name = Column(String)
+    password = Column(String)
+    username = Column(String)
     is_active = Column(Boolean, default=True)
     status = Column(SQLAEnum(UserStatus), default=UserStatus.ACTIVE)
     last_login = Column(DateTime(timezone=True), nullable=True)
@@ -27,7 +27,21 @@ class User(BaseModel):
     profile_image_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.now)
     updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    google_id = Column(String, unique=True, nullable=True)
     login_attempts=relationship("LoginAttempt",back_populates="user")
+    
+
+    def record_failed_login(self):
+        """Record a failed login attempt"""
+        self.failed_login_attempts += 1
+        self.last_failed_login = datetime.now(timezone.utc)
+        
+    def reset_failed_logins(self):
+        """Reset failed login counter"""
+        self.failed_login_attempts = 0
+        self.last_failed_login = None
+    
+
 
 class LoginAttempt(BaseModel):
     """Model for tracking user login attempts"""
