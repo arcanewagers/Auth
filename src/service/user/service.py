@@ -6,10 +6,11 @@ from sqlalchemy import UUID
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from src.models.user import LoginAttempt, User
-from src.service.user.schemas import GoogleOAuthPayload, UserCreate,UserProfileUpdate
+from src.service.user.entites import UserStatus
+from src.service.user.schemas import GoogleOAuthPayload, UserCreate,UserProfileUpdate,UserLogin
 from src.utils.email_service import EmailService
 from src.utils.exceptions import AuthenticationException, EmailAlreadyInUseException, RateLimitException, UserNotFoundException
-from src.utils.security.password import hash_password
+from src.utils.security.password import hash_password, verify_password
 from src.utils.security.token import create_access_token, verify_google_oauth_token
 from src.utils.config import settings
 class UserService:
@@ -95,6 +96,29 @@ class UserService:
             self.db.commit()
             self.db.refresh(user)
         return user
+    """USER LOGIN"""
+    def login(self,login_data:UserLogin)->User:
+        user=self.db.query(User).filter(User.email==login_data.email).first()
+
+        if not user:
+            raise AuthenticationException("invalid credentials")
+        
+        # Check login attempt limits
+        self._check_login_attempts(user)
+        
+        if not verify_password(login_data.password, user.password):
+            # Record failed attempt
+            self._record_login_attempt(user, success=False)
+            raise AuthenticationException("Invalid credentials")
+        
+        # Record successful login
+        self._record_login_attempt(user, success=True)
+        
+        if user.status != UserStatus.ACTIVE:
+            raise AuthenticationException("User account is not active")
+        
+        return user
+        
     
     """RECORD LOGIN"""
     def _record_login_attempt(self, user: User, success: bool):
