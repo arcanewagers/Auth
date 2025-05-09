@@ -11,7 +11,7 @@ from src.service.user.schemas import GoogleOAuthPayload, UserCreate,UserProfileU
 from src.utils.email_service import EmailService
 from src.utils.exceptions import AuthenticationException, EmailAlreadyInUseException, RateLimitException, UserNotFoundException
 from src.utils.security.password import hash_password, verify_password
-from src.utils.security.token import create_access_token, verify_google_oauth_token
+from src.utils.security.token import create_access_token, create_password_reset_jwt, verify_google_oauth_token, verify_password_reset_token
 from src.utils.config import settings
 class UserService:
     def __init__(self,db:Session):
@@ -148,5 +148,62 @@ class UserService:
         if recent_attempts >= settings.MAX_LOGIN_ATTEMPTS:
             raise RateLimitException("Too many login attempts. Please try again later.")    
 
+class PasswordResetService:
+    def __init__(self, db: Session):
+        self.db = db
+        self.email_service = EmailService()
+
+    def create_password_reset_token(self, email: str) -> str:
+        user = self.db.query(User).filter(User.email == email).first()
+        if not user:
+            raise AuthenticationException("User not found")
+
+        # Generate a JWT specifically for password reset
+        reset_token = create_password_reset_jwt(user.id)
+        
+        # Store token details in the database
+        user.password_reset_token = reset_token
+        user.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        
+        self.db.commit()
+
+        self.email_service.send_password_reset_email(user.email, reset_token)
+        return reset_token
+    def reset_password(self, reset_token: str, new_password: str):
+        try:
+            # Verify the password reset JWT
+            payload = verify_password_reset_token(reset_token)
+            
+            user = self.db.query(User).filter(User.id == payload['user_id']).first()
+            if not user:
+                raise AuthenticationException("User not found")
+
+            # Additional checks can be added here, like checking if the token is still valid in the database
+
+            # Validate new password complexity
+            if len(new_password) < 8:
+                raise AuthenticationException("Password must be at least 8 characters long")
+
+            # Hash new password
+            hashed_password = hash_password(new_password)
+            
+            # Update user's password and clear reset token
+            user.password = hashed_password
+            user.password_reset_token = None
+            user.password_reset_expires = None
+            
+            self.db.commit()
+
+            # Optionally, send a notification email
+            self.email_service.send_email(
+                user.email, 
+                "Password Changed", 
+                "Your password has been successfully reset."
+            )
+
+        except Exception as e:
+            raise AuthenticationException("Invalid or expired reset token")
+    
+    
 
     

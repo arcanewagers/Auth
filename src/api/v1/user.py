@@ -4,9 +4,10 @@ from fastapi import APIRouter,BackgroundTasks,Depends,HTTPException
 from sqlalchemy.orm import Session
 from src.api.dependencies import get_current_user, get_db
 from src.models.user import User
-from src.service.user.schemas import GoogleOAuthPayload, UserCreate, UserResponse,UserLogin
-from src.service.user.service import UserService
+from src.service.user.schemas import GoogleOAuthPayload, PasswordChangeRequest, PasswordResetConfirm, PasswordResetRequest, UserCreate, UserResponse,UserLogin
+from src.service.user.service import PasswordResetService, UserService
 from src.utils.exceptions import AuthenticationException, RateLimitException
+from src.utils.security.password import hash_password, verify_password
 
 router=APIRouter()
 
@@ -65,3 +66,27 @@ def google_login(payload: GoogleOAuthPayload, db: Session = Depends(get_db)):
 @router.get("/profile", response_model=UserResponse) 
 def get_current_user_info(current_user: User = Depends(get_current_user)): 
     return current_user
+
+@router.post("/forgot-password") 
+def forgot_password( 
+    request: PasswordResetRequest,  
+    db: Session = Depends(get_db) 
+): 
+    try: 
+        reset_service = PasswordResetService(db) 
+        reset_service.create_password_reset_token(request.email) 
+        return {"message": "Password reset link sent to your email"} 
+    except AuthenticationException as e: 
+        raise HTTPException(status_code=400, detail=str(e)) 
+ 
+@router.post("/reset-password") 
+def reset_password( 
+    reset_data: PasswordResetConfirm,  
+    db: Session = Depends(get_db) 
+): 
+    try: 
+        reset_service = PasswordResetService(db) 
+        reset_service.reset_password(reset_data.reset_token, reset_data.new_password) 
+        return {"message": "Password successfully reset"} 
+    except AuthenticationException as e: 
+        raise HTTPException(status_code=400, detail=str(e))

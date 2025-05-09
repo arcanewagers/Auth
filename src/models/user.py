@@ -28,6 +28,8 @@ class User(BaseModel):
     created_at = Column(DateTime(timezone=True), default=datetime.now)
     updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     google_id = Column(String, unique=True, nullable=True)
+    password_reset_token = Column(String, nullable=True)
+    password_reset_expires = Column(DateTime(timezone=True), nullable=True)
     login_attempts=relationship("LoginAttempt",back_populates="user")
     
 
